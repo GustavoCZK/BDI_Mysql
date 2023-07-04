@@ -1,0 +1,382 @@
+import sqlite3
+
+# Função para criar conexão com o banco de dados
+def criar_conexao():
+    conn = None
+    try:
+        conn = sqlite3.connect('funcionarios.db')
+    except sqlite3.Error as e:
+        print(e)
+    return conn
+
+# Função para criar tabela de funcionários
+def criar_tabela(conn):
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT count(*)
+        FROM sqlite_master
+        WHERE type='table' AND name='funcionarios'
+    """)
+
+    if cursor.fetchone()[0] == 1:
+        print('SEJA BEM-VINDO')
+        return
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS funcionarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            data_nascimento TEXT NOT NULL,
+            salario REAL NOT NULL
+        );
+    """)
+    print('Tabela criada com sucesso. SEJA BEM-VINDO')
+
+# Função para obter um funcionário pelo id
+def obter_funcionario_por_id(conn, id):
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM funcionarios WHERE id=?', (id,))
+    return cursor.fetchone()
+
+# Função para realizar as funções de CRUD
+
+
+    
+def confirmar_inclusao():
+    while True:
+        confirmar = input("Deseja incluir este item? (s/n) ")
+        if confirmar.lower() == 's':
+            return True
+        elif confirmar.lower() == 'n':
+            return False
+        else:
+            print("Resposta inválida. Digite 's' para sim ou 'n' para não.")
+
+def incluir_funcionario(conn):
+    cursor = conn.cursor()
+   
+    import re
+
+    def validar_nome(nome):
+        if not re.match("^[a-zA-Z]+(([',. -][a-zA-Z ])?[a-zA-Z]*)*$", nome):
+            raise ValueError("O nome deve conter apenas letras do alfabeto e pelo menos um espaço em branco.")
+        if any(char.isdigit() for char in nome):
+            raise ValueError("O nome não pode conter números.")
+        if " " not in nome:
+            raise ValueError("O nome deve ter pelo menos um espaço em branco.")
+
+    def verificar_nome_existente(conn, nome):
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM funcionarios WHERE nome = ?", (nome,))
+        result = cursor.fetchone()
+        if result:
+            raise ValueError("O nome informado já foi inserido anteriormente.")
+
+    while True:
+        nome = input('Digite o nome (ou digite "sair" para sair): ')
+        if nome.lower() == "sair":
+            return
+        else:
+            try:
+                validar_nome(nome)
+                verificar_nome_existente(conn, nome)
+                if confirmar_inclusao():
+                    break
+            except ValueError as e:
+                print(e)
+            
+    from datetime import datetime
+    
+    while True:
+        try:
+           data_nasc = input('Digite a data de nascimento (yyyy-mm-dd): (ou digite "sair" para sair) ')
+           if data_nasc.lower() == "sair":
+               return
+           data_nasc = datetime.strptime(data_nasc, '%Y-%m-%d').date()
+           if confirmar_inclusao():
+               break
+        except ValueError:
+            print('Data inválida. Digite no formato yyyy-mm-dd.')
+
+    sair = False
+    while not sair:
+        try:
+            salario = input("Digite o salário (ou digite 'sair' para sair): ")
+            if salario.lower() == "sair":
+                sair = True
+                continue
+            salario = float(salario)
+            if salario < 0 or salario > 100000:
+                raise ValueError("O salário deve estar entre 0 e 100000.")
+            salario = round(salario, 2) # Arredonda o valor para duas casas decimais
+        except ValueError as e:
+            if str(e) == "could not convert string to float: 'b'":
+                print("Por favor, digite um valor numérico.")
+            else:
+                print("O salário deve estar entre 0 e 100000.")
+        else:
+            
+            
+            if confirmar_inclusao() and salario >= 0 and salario <= 100000:
+                cursor.execute('INSERT INTO funcionarios (nome, data_nascimento, salario) VALUES (?, ?, ?)', (nome, data_nasc, salario))
+                conn.commit()
+                print('Funcionário incluído com sucesso!')
+                break
+            
+            return
+   
+import re
+
+def validar_nome(nome):
+    if not re.match("^[a-zA-Z ]+$", nome):
+        raise ValueError("O nome deve conter apenas letras do alfabeto e pelo menos um espaço em branco.")
+    if any(char.isdigit() for char in nome):
+        raise ValueError("O nome não pode conter números.")
+    if len(nome) > 50:
+        raise ValueError("O nome não pode ter mais de 50 caracteres.")
+    if " " not in nome:
+        raise ValueError("O nome deve ter pelo menos um espaço em branco.")
+
+
+import datetime
+
+def alterar_funcionario(conn):
+    cursor = conn.cursor()
+    while True:
+        try:
+            id_funcionario = int(input('Digite o ID do funcionário que deseja alterar: '))
+            cursor.execute("SELECT * FROM funcionarios WHERE id = ?", (id_funcionario,))
+            result = cursor.fetchone()
+            if not result:
+                raise ValueError("O ID de usuário não existe. Digite outro.")
+            else:
+                print("Dados do funcionário encontrado:")
+                funcionario = " | ".join(str(valor) for valor in result)
+                print(funcionario)
+            break
+        except ValueError as e:
+            print(e)
+
+    nome = result[1]  # Definindo a variável nome com o valor existente no banco de dados
+
+    while True:
+        print("O que deseja fazer?")
+        print("1. Modificar o funcionário")
+        print("2. Ir para a data")
+        print("0. Voltar")
+        opcao = input("Digite a opção desejada: ")
+
+        if opcao == "1":
+            while True:
+                nome = input('Digite o novo nome: ')
+                try:
+                    validar_nome(nome)
+                    break
+                except ValueError as e:
+                    print(e)
+
+            break
+        elif opcao == "2":
+            # código para ir para a data
+            print("Indo para a data...")
+            break
+        elif opcao == "0":
+            return
+        else:
+            print("Opção inválida. Digite novamente.")
+
+    while True:
+        try:
+            data_nasc = input('Digite a nova data de nascimento (yyyy-mm-dd): ')
+            data_nasc = datetime.datetime.strptime(data_nasc, '%Y-%m-%d').date()
+            break
+        except ValueError:
+            print('Data inválida. Digite no formato yyyy-mm-dd.')
+
+    while True:
+        try:
+            salario = float(input("Digite o novo salário: "))
+            if salario < 0 or salario > 100000:
+                raise ValueError("O salário deve estar entre 0 e 100000.")
+            break
+        except ValueError as e:
+            if str(e) == "could not convert string to float: 'b'":
+                print("Por favor, digite um valor numérico.")
+            else:
+                print("O salário deve estar entre 0 e 100000.")
+
+    cursor.execute('UPDATE funcionarios SET nome=?, data_nascimento=?, salario=? WHERE id=?', (nome, data_nasc, salario, id_funcionario))
+    conn.commit()
+
+    while True:
+        confirmacao = input("Deseja realmente alterar o funcionário? (s/n): ")
+        if confirmacao.lower() == "s":
+            print("Funcionário alterado com sucesso!")
+            break
+        elif confirmacao.lower() == "n":
+            print("Alteração cancelada.")
+            return
+        else:
+            print("Opção inválida. Digite 's' para confirmar ou 'n' para cancelar.")
+
+
+
+
+
+def excluir_funcionario(conn):
+    cursor = conn.cursor()
+    id_funcionario = int(input('Digite o ID do funcionário que deseja excluir: '))
+    cursor.execute('SELECT * FROM funcionarios WHERE id=?', (id_funcionario,))
+    funcionario = cursor.fetchone()
+    if funcionario:
+        nome = funcionario[1]
+        data_nascimento = funcionario[2]
+        salario = funcionario[3]
+        print('Dados do funcionário a ser excluído:')
+        print(f'Nome: {nome}')
+        print(f'Data de Nascimento: {data_nascimento}')
+        print(f'Salário: {salario}')
+        confirmacao = input(f'Tem certeza que deseja excluir o funcionário {nome} (S/N)? ')
+        if confirmacao.upper() == 'S':
+            cursor.execute('DELETE FROM funcionarios WHERE id=?', (id_funcionario,))
+            conn.commit()
+            print(f'Funcionário {nome} excluído com sucesso!')
+    else:
+        print('Funcionário não encontrado.')
+        
+def buscar_por_salario(conn):
+    cursor = conn.cursor()
+
+    print("Busca de funcionários por salário")
+    salario_min = float(input("Digite o salário mínimo: "))
+    salario_max = float(input("Digite o salário máximo: "))
+
+    cursor.execute("SELECT * FROM funcionarios WHERE salario BETWEEN ? AND ?", (salario_min, salario_max))
+    resultados = cursor.fetchall()
+
+    if not resultados:
+        print("Nenhum funcionário encontrado com os critérios de busca.")
+    else:
+        print("Funcionários encontrados:")
+        for resultado in resultados:
+            funcionario = " | ".join(str(valor) for valor in resultado)
+            print(funcionario)
+
+
+
+
+def buscar_por_id(conn):
+    cursor = conn.cursor()
+    while True:
+        try:
+            id_funcionario = input('Digite o ID do funcionário que deseja buscar (ou digite "voltar" para retornar ao menu principal): ')
+            if id_funcionario.lower() == 'voltar':
+                return
+            id_funcionario = int(id_funcionario)
+            cursor.execute('SELECT * FROM funcionarios WHERE id=?', (id_funcionario,))
+            resultados = cursor.fetchall()
+            if not resultados:
+                print('Nenhum funcionário encontrado com o ID informado.')
+            else:
+                print('Funcionário encontrado:')
+                for resultado in resultados:
+                    funcionario = " | ".join(str(valor) for valor in resultado)
+                    print(funcionario)
+            break
+        except ValueError:
+            print('ID inválido. Digite um valor numérico para o ID ou "voltar" para retornar ao menu principal.')
+
+
+def buscar_por_nome(conn):
+    cursor = conn.cursor()
+    nome = input('Digite o nome (ou parte dele): ')
+    cursor.execute("SELECT * FROM funcionarios WHERE nome LIKE '%' || ? || '%'", (nome,))
+    resultados = cursor.fetchall()
+
+    if not resultados:
+        print('Nenhum funcionário encontrado com o nome informado')
+    else:
+        print('Funcionários encontrados:')
+        for resultado in resultados:
+            funcionario = " | ".join(str(valor) for valor in resultado)
+            print(funcionario)
+            
+def buscar_por_data_nascimento(conn, data_nascimento):
+    cursor = conn.cursor()
+
+    # Executa a consulta no banco de dados
+    cursor.execute("SELECT * FROM funcionarios WHERE data_nascimento = ?", (data_nascimento,))
+
+    # Recupera todos os registros encontrados
+    registros = cursor.fetchall()
+
+    # Exibe os registros na tela
+    if len(registros) == 0:
+        print("Nenhum registro encontrado.")
+    else:
+        for registro in registros:
+            funcionario = " | ".join(str(valor) for valor in registro)
+            print(funcionario)
+            print()
+            
+def listar_funcionarios(conn):
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM funcionarios")
+    resultados = cursor.fetchall()
+
+    if not resultados:
+        print("Nenhum funcionário encontrado.")
+    else:
+        print("Listagem de funcionários:")
+        for resultado in resultados:
+            # Concatenar os valores dos funcionários com espaços
+            funcionario = " | ".join(str(valor) for valor in resultado)
+            print(funcionario)
+
+def menu(conn):
+    while True:
+        print('************************************************************') 
+        print('ESCOLHA UMA OPÇÃO') 
+        print('************************************************************')
+        
+        print('1 - Incluir funcionário')
+        print('2 - Alterar funcionário')
+        print('3 - Excluir funcionário')
+        print('4 - Buscar funcionário por ID')
+        print('5 - Buscar funcionários por nome')
+        print('6 - Buscar funcionário por data de nascimento')
+        print('7 - Buscar por salário')
+        print('8 - Listagem de Funcionários')
+        print('0 - Sair')
+        print('************************************************************')
+        opcao = input('OPÇÃO ESCOLHIDA: ')
+        print('************************************************************')
+        if opcao == '1':
+            incluir_funcionario(conn)
+        elif opcao == '2':
+            alterar_funcionario(conn)
+        elif opcao == '3':
+            excluir_funcionario(conn)
+        elif opcao == '4':
+            buscar_por_id(conn)
+        elif opcao == '5':
+            buscar_por_nome(conn)
+        elif opcao == '6':
+            data_nascimento = input("Digite a data de nascimento no formato YYYY-MM-DD: ")
+            buscar_por_data_nascimento(conn, data_nascimento)
+        elif opcao == '7':
+             buscar_por_salario(conn)
+        elif opcao == '8':
+             listar_funcionarios(conn)
+        elif opcao == '0':
+            break
+        else:
+            print('Opção inválida. Tente novamente.')
+
+
+if __name__ == '__main__':
+    conn = criar_conexao()
+    criar_tabela(conn)
+    menu(conn)
+
